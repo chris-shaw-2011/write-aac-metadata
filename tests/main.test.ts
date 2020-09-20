@@ -3,10 +3,11 @@ import * as mm from "music-metadata"
 import fs from "fs"
 import assert from "assert"
 import Metadata from "../src/Metadata"
+import path from "path"
 import { baseOverrides, multiLineOverrides, pictureOverride, singleOverride } from "./overrides"
 
-const out = "tests\\test.out.m4b"
-const input = "tests\\test.m4b"
+const out = path.join(__dirname, "test.out.m4b")
+const input = path.join(__dirname, "test.m4b")
 
 describe("write-aac-metadata", () => {
    it("Changing metadata, output to a new file", async () => {
@@ -146,16 +147,19 @@ describe("write-aac-metadata", () => {
 
       await metadataWriter(input, {}, out)
 
-      const origOut = process.stdout.write
-      process.stdout.write = () => { return true }
+      removeIfExsits("stdout.log")
 
-      await metadataWriter(out, {}, undefined, { debug: true, pipeStdio: true })
+      const stdout = fs.createWriteStream("stdout.log")
+      const stdoutWrite = process.stdout.write
+
+      process.stdout.write = stdout.write.bind(stdout) as any
+
+      await metadataWriter(out, {}, undefined, { debug: true })
+
+      process.stdout.write = stdoutWrite
 
       removeIfExsits(out)
-
-      await metadataWriter(input, {}, out, { debug: true })
-
-      process.stdout.write = origOut
+      removeIfExsits("stdout.log")
    })
 
    it("Errors", async () => {
@@ -175,6 +179,9 @@ describe("write-aac-metadata", () => {
 })
 
 function checkMetadata(overrides: Metadata, originalMetadata: mm.ICommonTagsResult, tags: mm.ICommonTagsResult, origFile: string, newFile: string) {
+   const origStats = fs.statSync(origFile)
+   const newStats = fs.statSync(newFile)
+
    assert.strictEqual(tags.album, coalesceUndefined(overrides.album, originalMetadata.album))
    assert.strictEqual(tags.artist, coalesceUndefined(overrides.artist, originalMetadata.artist))
    assert.strictEqual(tags.albumartist, coalesceUndefined(overrides.albumArtist, originalMetadata.albumartist))
@@ -189,7 +196,11 @@ function checkMetadata(overrides: Metadata, originalMetadata: mm.ICommonTagsResu
    assert.strictEqual(arrayTag(tags.picture)?.data?.length, coalesceUndefined(overrides.coverPicturePath ? fs.statSync(overrides.coverPicturePath).size : undefined, arrayTag(originalMetadata.picture)?.data?.length))
    assert.strictEqual(arrayTag(tags.description), coalesceUndefined(overrides.description, arrayTag(originalMetadata.description)))
    assert.strictEqual(tags.longDescription, coalesceUndefined(overrides.synopsis, originalMetadata.longDescription))
-   assert.strictEqual(Math.round(fs.statSync(origFile).birthtimeMs), Math.round(fs.statSync(newFile).birthtimeMs))
+   assert.strictEqual(Math.round(newStats.mtimeMs), Math.round(origStats.mtimeMs))
+
+   if (process.platform !== "linux") {
+      assert.strictEqual(Math.round(newStats.birthtimeMs), Math.round(origStats.birthtimeMs))
+   }
 }
 
 function coalesceUndefined<T>(...params: T[]) {

@@ -1,4 +1,4 @@
-import { spawn, ChildProcess } from "child_process"
+import child_process, { ChildProcess, spawn } from "child_process"
 import ffmpegPath from "ffmpeg-static"
 import Options from "./Options"
 import DefaultOptions from "./DefaultOptions"
@@ -7,6 +7,9 @@ import { v4 as uuid } from "uuid"
 import path from "path"
 import fs from "fs"
 import { utimes } from "utimes"
+import util from "util"
+
+const exec = util.promisify(child_process.exec)
 /**
  *
  * @param inputFilePath The fully qualified path to the file that will have its metadata changed
@@ -95,7 +98,7 @@ export default async (inputFilePath: string, metadata: Metadata, outputFilePath?
       console.debug(`Running command ${ffmpegPath} ${args.join(" ")}`)
    }
 
-   const ffmpeg = spawn(ffmpegPath, args, { windowsVerbatimArguments: true, stdio: opt.pipeStdio ? ["pipe", process.stdout, process.stderr] : undefined })
+   const ffmpeg = spawn(ffmpegPath, args, { windowsVerbatimArguments: true, stdio: opt.pipeStdio ? ["pipe", process.stdout, process.stderr] : undefined, detached: false, shell: process.platform !== "win32" })
 
    await onExit(ffmpeg)
 
@@ -104,14 +107,17 @@ export default async (inputFilePath: string, metadata: Metadata, outputFilePath?
       console.debug(`Created file ${ffmpegFileOutputPath}`)
    }
 
-   const inputFileCreation = Math.round(fs.statSync(inputFilePath).birthtimeMs)
+   const inputFileStats = fs.statSync(inputFilePath)
+   const btime = Math.round(inputFileStats.birthtimeMs)
+   const atime = Math.round(inputFileStats.atimeMs)
+   const mtime = Math.round(inputFileStats.mtimeMs)
 
    if (opt.debug) {
       // tslint:disable-next-line: no-console
-      console.debug(`Setting ${ffmpegFileOutputPath} creation date to ${new Date(inputFileCreation)} (${inputFileCreation}) so it matches with the original file`)
+      console.debug(`Setting ${ffmpegFileOutputPath} creation date: ${new Date(btime)} (${btime}), accessed date: ${new Date(atime)} (${atime}), modified date: ${new Date(atime)} (${atime}) so it matches with the original file`)
    }
 
-   await utimes(ffmpegFileOutputPath, { btime: inputFileCreation })
+   await utimes(ffmpegFileOutputPath, { btime, atime, mtime })
 
    if (ffmpegFileOutputPath !== outputFilePath) {
       if (opt.debug) {
@@ -132,12 +138,16 @@ export default async (inputFilePath: string, metadata: Metadata, outputFilePath?
 
 function addMetaData(args: string[], key: string, value: string | number | undefined) {
    if (value !== undefined) {
-      if (typeof value === "number") {
-         args.push("-metadata", `${key}=${value}`)
+      let arg = value
+
+      if (process.platform !== "win32") {
+         arg = `'${arg.toString().replace(/\'/g, "'\\\''")}'`
       }
       else {
-         args.push("-metadata", `${key}="${value.replace("\"", "\\\"")}"`)
+         arg = `"${arg.toString().replace(/\"/g, "\\\"")}"`
       }
+
+      args.push("-metadata", `${key}=${arg}`)
    }
 }
 

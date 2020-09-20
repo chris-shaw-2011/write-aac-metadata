@@ -1,17 +1,19 @@
+import path from "path"
+
 export const baseOverrides = {
-   album: "al\"bum",
-   artist: "ar\"tist",
-   albumArtist: "alb\"umArtist",
-   grouping: "grouping",
-   composer: "com\"poser",
+   album: "\\a\\l\"b\"u'm'",
+   artist: "\\a\\r\"t\"is't'",
+   albumArtist: "\\a\\lb\"u\"mArtis't'",
+   grouping: "\\g\\r\"o\"upin'g'",
+   composer: "\\c\\om\"po\"se'r'",
    year: 2019,
    trackNumber: 2,
-   comment: "com\"ment",
-   genre: "ge\"nre",
-   copyright: "copy\"right",
-   description: "desc\"ription",
-   title: "tit\"le",
-   synopsis: "syno\"psis",
+   comment: "\\c\\om\"m\"en't'",
+   genre: "\\g\\e\"n\"r'e'",
+   copyright: "\\c\\opy\"r\"igh't'",
+   description: "\\d\\esc\"r\"iptio'n'",
+   title: "\\t\\i\"t\"l'e'",
+   synopsis: "\\s\\yn\"o\"psi's'",
 }
 
 export const multiLineOverrides = {
@@ -35,6 +37,6 @@ export const singleOverride = {
 }
 
 export const pictureOverride = {
-   coverPicturePath: "tests\\test.jpg",
+   coverPicturePath: path.join(__dirname, "test.jpg"),
    composer: "composer",
 }
