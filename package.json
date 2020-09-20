@@ -8,6 +8,9 @@
       "build": "tsc",
       "test": "nyc mocha -r ts-node/register tests/**/*.test.ts"
    },
+   "files": [
+      "dist/**/*"
+   ],
    "repository": {
       "type": "git",
       "url": "git+https://github.com/chris-shaw-2011/write-aac-metadata.git"
