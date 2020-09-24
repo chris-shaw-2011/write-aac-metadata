@@ -1,6 +1,6 @@
 {
    "name": "write-aac-metadata",
-   "version": "1.0.0",
+   "version": "1.0.4",
    "description": "NodeJS module that will allow you to write aac (m4a, m4b) metadata using ffmpeg",
    "main": "dist/index.js",
    "types": "dist/index.d.ts",
@@ -29,7 +29,7 @@
    "homepage": "https://github.com/chris-shaw-2011/write-aac-metadata#readme",
    "dependencies": {
       "ffmpeg-static": "^4.2.7",
-      "utimes": "^4.0.1",
+      "utimes": "3.0.2",
       "uuid": "^8.3.0"
    },
    "devDependencies": {
