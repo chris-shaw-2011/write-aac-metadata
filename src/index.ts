@@ -1,4 +1,4 @@
-import child_process, { ChildProcess, spawn } from "child_process"
+import { ChildProcess, spawn } from "child_process"
 import ffmpegPath from "ffmpeg-static"
 import Options from "./Options"
 import DefaultOptions from "./DefaultOptions"
@@ -7,9 +7,7 @@ import { v4 as uuid } from "uuid"
 import path from "path"
 import fs from "fs"
 import { utimes } from "utimes"
-import util from "util"
 
-const exec = util.promisify(child_process.exec)
 /**
  *
  * @param inputFilePath The fully qualified path to the file that will have its metadata changed
@@ -44,19 +42,19 @@ export default async (inputFilePath: string, metadata: Metadata, outputFilePath?
    }
 
    if (opt.debug) {
-      // tslint:disable-next-line: no-console
+      // eslint-disable-next-line no-console
       console.debug("filePath:", inputFilePath)
-      // tslint:disable-next-line: no-console
+      // eslint-disable-next-line no-console
       console.debug("outputFilePath:", outputFilePath)
 
       if (ffmpegFileOutputPath !== outputFilePath) {
-         // tslint:disable-next-line: no-console
+         // eslint-disable-next-line no-console
          console.debug("ffmpegFileOutputPath", ffmpegFileOutputPath)
       }
 
-      // tslint:disable-next-line: no-console
+      // eslint-disable-next-line no-console
       console.debug("metadata:", metadata)
-      // tslint:disable-next-line: no-console
+      // eslint-disable-next-line no-console
       console.debug("Applied Options:", opt)
    }
 
@@ -94,7 +92,7 @@ export default async (inputFilePath: string, metadata: Metadata, outputFilePath?
    args.push(`"${ffmpegFileOutputPath}"`)
 
    if (opt.debug) {
-      // tslint:disable-next-line: no-console
+      // eslint-disable-next-line no-console
       console.debug(`Running command ${ffmpegPath} ${args.join(" ")}`)
    }
 
@@ -103,7 +101,7 @@ export default async (inputFilePath: string, metadata: Metadata, outputFilePath?
    await onExit(ffmpeg)
 
    if (opt.debug) {
-      // tslint:disable-next-line: no-console
+      // eslint-disable-next-line no-console
       console.debug(`Created file ${ffmpegFileOutputPath}`)
    }
 
@@ -113,7 +111,7 @@ export default async (inputFilePath: string, metadata: Metadata, outputFilePath?
    const mtime = Math.round(inputFileStats.mtimeMs)
 
    if (opt.debug) {
-      // tslint:disable-next-line: no-console
+      // eslint-disable-next-line no-console
       console.debug(`Setting ${ffmpegFileOutputPath} creation date: ${new Date(btime)} (${btime}), accessed date: ${new Date(atime)} (${atime}), modified date: ${new Date(atime)} (${atime}) so it matches with the original file`)
    }
 
@@ -121,14 +119,14 @@ export default async (inputFilePath: string, metadata: Metadata, outputFilePath?
 
    if (ffmpegFileOutputPath !== outputFilePath) {
       if (opt.debug) {
-         // tslint:disable-next-line: no-console
+         // eslint-disable-next-line no-console
          console.debug(`Deleting ${outputFilePath}`)
       }
 
       fs.unlinkSync(outputFilePath)
 
       if (opt.debug) {
-         // tslint:disable-next-line: no-console
+         // eslint-disable-next-line no-console
          console.debug(`Renaming ${ffmpegFileOutputPath} to ${outputFilePath}`)
       }
 
@@ -141,10 +139,10 @@ function addMetaData(args: string[], key: string, value: string | number | undef
       let arg = value
 
       if (process.platform !== "win32") {
-         arg = `'${arg.toString().replace(/\'/g, "'\\\''")}'`
+         arg = `'${arg.toString().replace(/'/g, "'\\''")}'`
       }
       else {
-         arg = `"${arg.toString().replace(/\"/g, "\\\"")}"`
+         arg = `"${arg.toString().replace(/"/g, "\\\"")}"`
       }
 
       args.push("-metadata", `${key}=${arg}`)
@@ -153,7 +151,7 @@ function addMetaData(args: string[], key: string, value: string | number | undef
 
 function onExit(childProcess: ChildProcess): Promise<void> {
    return new Promise((resolve, reject) => {
-      childProcess.once("exit", (code: number, signal: string) => {
+      childProcess.once("exit", code => {
          if (code === 0) {
             resolve(undefined)
          } else {
