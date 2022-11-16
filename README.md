@@ -9,7 +9,7 @@ yarn add write-aac-metadata
 
 ## Usage
 ```javascript
-import metadataWriter from "../src/index"
+import metadataWriter from "write-aac-metadata"
 
 const writeMetadata = async () => {
    await metadataWriter("someFile.m4a", {title: "Some Title", description: "Description"}, "someFile-copy.m4a")

@@ -15,7 +15,7 @@ import { utimes } from "utimes"
  * @param outputFilePath The output name of the file, pass undefined or empy string if you want to keep the file name the same
  * @param options
  */
-export default async (inputFilePath: string, metadata: Metadata, outputFilePath?: string, options?: Options) => {
+ export default async (inputFilePath: string, metadata: Metadata, outputFilePath?: string, options?: Options) => {
    const opt = { ...DefaultOptions, ...options }
    const args = ["-i"]
    const coverPicturePath = metadata.coverPicturePath ? metadata.coverPicturePath : ""
@@ -96,7 +96,7 @@ export default async (inputFilePath: string, metadata: Metadata, outputFilePath?
       console.debug(`Running command ${ffmpegPath} ${args.join(" ")}`)
    }
 
-   const ffmpeg = spawn(ffmpegPath, args, { windowsVerbatimArguments: true, stdio: opt.pipeStdio ? ["pipe", process.stdout, process.stderr] : undefined, detached: false, shell: process.platform !== "win32" })
+   const ffmpeg = spawn(ffmpegPath ?? "", args, { windowsVerbatimArguments: true, stdio: opt.pipeStdio ? ["pipe", process.stdout, process.stderr] : undefined, detached: false, shell: process.platform !== "win32" })
 
    await onExit(ffmpeg)
 
