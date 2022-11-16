@@ -11,7 +11,7 @@ const input = path.join(__dirname, "test.m4b")
 
 describe("write-aac-metadata", () => {
    it("Changing metadata, output to a new file", async () => {
-      removeIfExsits(out)
+      await removeIfExsits(out)
 
       await metadataWriter(input, baseOverrides, out)
 
@@ -20,11 +20,11 @@ describe("write-aac-metadata", () => {
 
       checkMetadata(baseOverrides, origTags, tags, input, out)
 
-      removeIfExsits(out)
+      await removeIfExsits(out)
    })
 
    it("Multiline metadata, output to a new file", async () => {
-      removeIfExsits(out)
+      await removeIfExsits(out)
 
       await metadataWriter(input, multiLineOverrides, out)
 
@@ -33,11 +33,11 @@ describe("write-aac-metadata", () => {
 
       checkMetadata(multiLineOverrides, origTags, tags, input, out)
 
-      removeIfExsits(out)
+      await removeIfExsits(out)
    })
 
    it("Don't delete unchanged metadata, output to a new file", async () => {
-      removeIfExsits(out)
+      await removeIfExsits(out)
 
       await metadataWriter(input, singleOverride, out)
 
@@ -46,11 +46,11 @@ describe("write-aac-metadata", () => {
 
       checkMetadata(singleOverride, origTags, tags, input, out)
 
-      removeIfExsits(out)
+      await removeIfExsits(out)
    })
 
    it("Update photo, output to a new file", async () => {
-      removeIfExsits(out)
+      await removeIfExsits(out)
 
       await metadataWriter(input, pictureOverride, out)
 
@@ -59,11 +59,11 @@ describe("write-aac-metadata", () => {
 
       checkMetadata(pictureOverride, origTags, tags, input, out)
 
-      removeIfExsits(out)
+      await removeIfExsits(out)
    })
 
    it("Changing metadata, output to same file", async () => {
-      removeIfExsits(out)
+      await removeIfExsits(out)
 
       // Copy the file so we don't screw up the original
       await metadataWriter(input, {}, out)
@@ -75,11 +75,11 @@ describe("write-aac-metadata", () => {
 
       checkMetadata(baseOverrides, origTags, tags, input, out)
 
-      removeIfExsits(out)
+      await removeIfExsits(out)
    })
 
    it("Changing metadata, output to same file, no output parameter", async () => {
-      removeIfExsits(out)
+      await removeIfExsits(out)
 
       // Copy the file so we don't screw up the original
       await metadataWriter(input, {}, out)
@@ -91,11 +91,11 @@ describe("write-aac-metadata", () => {
 
       checkMetadata(baseOverrides, origTags, tags, input, out)
 
-      removeIfExsits(out)
+      await removeIfExsits(out)
    })
 
    it("Multiline metadata, output to same file", async () => {
-      removeIfExsits(out)
+      await removeIfExsits(out)
 
       // Copy the file so we don't screw up the original
       await metadataWriter(input, {}, out)
@@ -107,11 +107,11 @@ describe("write-aac-metadata", () => {
 
       checkMetadata(multiLineOverrides, origTags, tags, input, out)
 
-      removeIfExsits(out)
+      await removeIfExsits(out)
    })
 
    it("Don't delete unchanged metadata, output to same file", async () => {
-      removeIfExsits(out)
+      await removeIfExsits(out)
 
       // Copy the file so we don't screw up the original
       await metadataWriter(input, {}, out)
@@ -123,11 +123,11 @@ describe("write-aac-metadata", () => {
 
       checkMetadata(singleOverride, origTags, tags, input, out)
 
-      removeIfExsits(out)
+      await removeIfExsits(out)
    })
 
    it("Update photo, output to same file", async () => {
-      removeIfExsits(out)
+      await removeIfExsits(out)
 
       // Copy the file so we don't screw up the original
       await metadataWriter(input, {}, out)
@@ -139,15 +139,15 @@ describe("write-aac-metadata", () => {
 
       checkMetadata(pictureOverride, origTags, tags, input, out)
 
-      removeIfExsits(out)
+      await removeIfExsits(out)
    })
 
    it("Debug mode (for code coverage)", async () => {
-      removeIfExsits(out)
+      await removeIfExsits(out)
 
       await metadataWriter(input, {}, out)
 
-      removeIfExsits("stdout.log")
+      await removeIfExsits("stdout.log")
 
       const stdout = fs.createWriteStream("stdout.log")
       const stdoutWrite = process.stdout.write
@@ -158,12 +158,12 @@ describe("write-aac-metadata", () => {
 
       process.stdout.write = stdoutWrite
 
-      removeIfExsits(out)
-      removeIfExsits("stdout.log")
+      await removeIfExsits(out)
+      await removeIfExsits("stdout.log")
    })
 
    it("Errors", async () => {
-      removeIfExsits(out)
+      await removeIfExsits(out)
 
       // File not found
       await assert.rejects(metadataWriter(out, {}))
@@ -174,7 +174,7 @@ describe("write-aac-metadata", () => {
       // Output file already exists
       await assert.rejects(metadataWriter(input, {}, out))
 
-      removeIfExsits(out)
+      await removeIfExsits(out)
    })
 })
 
@@ -219,6 +219,6 @@ function arrayTag<T>(arr?: T[]) {
 
 async function removeIfExsits(file: string) {
    if (fs.existsSync(file)) {
-      fs.unlinkSync(file)
+      await fs.promises.unlink(file)
    }
 }
