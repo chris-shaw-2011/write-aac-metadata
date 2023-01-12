@@ -3,8 +3,12 @@ import * as mm from "music-metadata"
 import fs from "fs"
 import assert from "assert"
 import Metadata from "../src/Metadata"
-import path from "path"
+import path, {dirname} from "path"
 import { baseOverrides, multiLineOverrides, pictureOverride, singleOverride } from "./overrides"
+import { fileURLToPath } from "url"
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 const out = path.join(__dirname, "test.out.m4b")
 const input = path.join(__dirname, "test.m4b")
@@ -152,6 +156,7 @@ describe("write-aac-metadata", () => {
       const stdout = fs.createWriteStream("stdout.log")
       const stdoutWrite = process.stdout.write
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       process.stdout.write = stdout.write.bind(stdout) as any
 
       await metadataWriter(out, {}, undefined, { debug: true })
