@@ -1,7 +1,7 @@
 import { ChildProcess, spawn } from "child_process"
 import ffmpegPath from "ffmpeg-static"
 import Options from "./Options"
-import DefaultOptions from "./DefaultOptions"
+import DefaultOptions from "./DefaultOptions.js"
 import Metadata from "./Metadata"
 import { v4 as uuid } from "uuid"
 import path from "path"
