@@ -1,9 +1,8 @@
-import Options from "./Options"
+import type Options from "./Options.js"
 
-// tslint:disable-next-line: variable-name
 const DefaultOptions: Options = {
-   debug: false,
-   pipeStdio: false,
+	debug: false,
+	pipeStdio: false,
 }
 
 export default DefaultOptions
