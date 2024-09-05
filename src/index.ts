@@ -29,7 +29,7 @@ function onExit(childProcess: ChildProcess): Promise<void> {
 			if (code === 0) {
 				resolve(undefined)
 			} else {
-				reject(new Error("Exit with error code: " + code))
+				reject(new Error(`Exit with error code: ${code?.toString()}`))
 			}
 		})
 		/* istanbul ignore next */
@@ -129,7 +129,7 @@ export default async (inputFilePath: string, metadata: Metadata, outputFilePath?
 		console.debug(`Running command ${ffmpegPath} ${args.join(" ")}`)
 	}
 
-	const ffmpeg = spawn(ffmpegPath ?? "", args, { windowsVerbatimArguments: true, stdio: opt.pipeStdio ? ["pipe", process.stdout, process.stderr] : undefined, detached: false, shell: process.platform !== "win32" })
+	const ffmpeg = spawn(ffmpegPath, args, { windowsVerbatimArguments: true, stdio: opt.pipeStdio ? ["pipe", process.stdout, process.stderr] : undefined, detached: false, shell: process.platform !== "win32" })
 
 	await onExit(ffmpeg)
 

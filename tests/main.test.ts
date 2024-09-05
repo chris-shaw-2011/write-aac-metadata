@@ -47,7 +47,7 @@ function checkMetadata(overrides: Metadata, originalMetadata: mm.ICommonTagsResu
 	assert.strictEqual(tags.year, coalesceUndefined(overrides.year, originalMetadata.year))
 	assert.strictEqual(arrayTag(tags.composer), coalesceUndefined(overrides.composer, arrayTag(originalMetadata.composer)))
 	assert.strictEqual(tags.copyright, coalesceUndefined(overrides.copyright, originalMetadata.copyright))
-	assert.strictEqual(arrayTag(tags.picture)?.data?.length, coalesceUndefined(overrides.coverPicturePath ? fs.statSync(overrides.coverPicturePath).size : undefined, arrayTag(originalMetadata.picture)?.data?.length))
+	assert.strictEqual(arrayTag(tags.picture)?.data.length, coalesceUndefined(overrides.coverPicturePath ? fs.statSync(overrides.coverPicturePath).size : undefined, arrayTag(originalMetadata.picture)?.data.length))
 	assert.strictEqual(arrayTag(tags.description), coalesceUndefined(overrides.description, arrayTag(originalMetadata.description)))
 	assert.strictEqual(tags.longDescription, coalesceUndefined(overrides.synopsis, originalMetadata.longDescription))
 	assert.strictEqual(Math.round(newStats.mtimeMs), Math.round(origStats.mtimeMs))

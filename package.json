@@ -8,7 +8,7 @@
 	"scripts": {
 		"build": "tsc -p ./tsconfig.release.json",
 		"test": "mocha",
-		"lint": "eslint . --ext ts,tsx,js,jsx --max-warnings 0 --report-unused-disable-directives-severity error",
+		"lint": "eslint . --report-unused-disable-directives-severity error",
 		"coverage": "npx nyc@latest mocha"
 	},
 	"files": [
@@ -33,21 +33,21 @@
 	"dependencies": {
 		"ffmpeg-static": "^5.2.0",
 		"utimes": "5.2.1",
-		"uuid": "^9.0.1"
+		"uuid": "^10.0.0"
 	},
 	"devDependencies": {
-		"@types/chai": "4.3.14",
-		"@types/ffmpeg-static": "3.0.3",
-		"@types/mocha": "10.0.6",
-		"@types/node": "20.12.2",
-		"@types/uuid": "9.0.8",
-		"@typescript-eslint/eslint-plugin": "7.5.0",
-		"@typescript-eslint/parser": "7.5.0",
-		"eslint": "8.57.0",
-		"eslint-plugin-deprecation": "2.0.0",
-		"mocha": "10.4.0",
-		"music-metadata": "7.14.0",
-		"ts-node": "10.9.2",
-		"typescript": "5.4.3"
+		"@eslint/js": "^9.9.1",
+		"@types/chai": "^4.3.19",
+		"@types/eslint__js": "^8.42.3",
+		"@types/ffmpeg-static": "^3.0.3",
+		"@types/mocha": "^10.0.7",
+		"@types/node": "^20.16.5",
+		"@types/uuid": "^10.0.0",
+		"eslint": "^9.9.1",
+		"mocha": "^10.7.3",
+		"music-metadata": "^7.14.0",
+		"ts-node": "^10.9.2",
+		"typescript": "^5.5.4",
+		"typescript-eslint": "^8.4.0"
 	}
 }
