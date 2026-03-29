@@ -7,9 +7,12 @@
 	"type": "module",
 	"scripts": {
 		"build": "tsc -p ./tsconfig.release.json",
-		"test": "mocha",
+		"build:test": "tsc -p ./tsconfig.test.json",
+		"test": "npm run build:test && mocha",
 		"lint": "eslint . --report-unused-disable-directives-severity error",
-		"coverage": "npx nyc@latest mocha"
+		"lint:fix": "eslint . --fix",
+		"typecheck": "tsc -p ./tsconfig.json --noEmit",
+		"coverage": "npm run build:test && npx nyc@latest mocha"
 	},
 	"files": [
 		"dist/**/*"
@@ -31,23 +34,16 @@
 	},
 	"homepage": "https://github.com/chris-shaw-2011/write-aac-metadata#readme",
 	"dependencies": {
-		"ffmpeg-static": "^5.2.0",
+		"ffmpeg-static": "^5.3.0",
 		"utimes": "5.2.1",
-		"uuid": "^10.0.0"
+		"uuid": "^13.0.0"
 	},
 	"devDependencies": {
-		"@eslint/js": "^9.9.1",
-		"@types/chai": "^4.3.19",
-		"@types/eslint__js": "^8.42.3",
-		"@types/ffmpeg-static": "^3.0.3",
-		"@types/mocha": "^10.0.7",
-		"@types/node": "^20.16.5",
-		"@types/uuid": "^10.0.0",
-		"eslint": "^9.9.1",
-		"mocha": "^10.7.3",
-		"music-metadata": "^7.14.0",
-		"ts-node": "^10.9.2",
-		"typescript": "^5.5.4",
-		"typescript-eslint": "^8.4.0"
+		"@chris-shaw-2011/lint": "^1.0.0",
+		"@types/mocha": "^10.0.10",
+		"@types/node": "^25.5.0",
+		"mocha": "^11.7.5",
+		"music-metadata": "^11.12.3",
+		"typescript": "^6.0.2"
 	}
 }

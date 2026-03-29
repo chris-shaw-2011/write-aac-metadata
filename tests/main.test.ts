@@ -1,16 +1,15 @@
 import metadataWriter from "../src/index.js"
 import * as mm from "music-metadata"
+import type { ICommonTagsResult } from "music-metadata"
 import fs from "fs"
 import assert from "assert"
 import type Metadata from "../src/Metadata.js"
-import path, { dirname } from "path"
+import path from "path"
 import { baseOverrides, multiLineOverrides, pictureOverride, singleOverride } from "./overrides.js"
-import { fileURLToPath } from "url"
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-const out = path.join(__dirname, "test.out.m4b")
-const input = path.join(__dirname, "test.m4b")
+const testsDir = path.join(process.cwd(), "tests")
+const out = path.join(testsDir, "test.out.m4b")
+const input = path.join(testsDir, "test.m4b")
 
 function coalesceUndefined<T>(...params: T[]) {
 	for (const item of params) {
@@ -26,13 +25,27 @@ function arrayTag<T>(arr?: T[]) {
 	return arr ? arr[0] : undefined
 }
 
+function commentTag(arr?: unknown[]) {
+	const comment = arr?.[0]
+
+	if (typeof comment === "string") {
+		return comment
+	}
+
+	if (comment && typeof comment === "object" && "text" in comment && typeof comment.text === "string") {
+		return comment.text
+	}
+
+	return undefined
+}
+
 async function removeIfExsits(file: string) {
 	if (fs.existsSync(file)) {
 		await fs.promises.unlink(file)
 	}
 }
 
-function checkMetadata(overrides: Metadata, originalMetadata: mm.ICommonTagsResult, tags: mm.ICommonTagsResult, origFile: string, newFile: string) {
+function checkMetadata(overrides: Metadata, originalMetadata: ICommonTagsResult, tags: ICommonTagsResult, origFile: string, newFile: string) {
 	const origStats = fs.statSync(origFile)
 	const newStats = fs.statSync(newFile)
 
@@ -40,7 +53,7 @@ function checkMetadata(overrides: Metadata, originalMetadata: mm.ICommonTagsResu
 	assert.strictEqual(tags.artist, coalesceUndefined(overrides.artist, originalMetadata.artist))
 	assert.strictEqual(tags.albumartist, coalesceUndefined(overrides.albumArtist, originalMetadata.albumartist))
 	assert.strictEqual(tags.grouping, coalesceUndefined(overrides.grouping, originalMetadata.grouping))
-	assert.strictEqual(arrayTag(tags.comment), coalesceUndefined(overrides.comment, arrayTag(originalMetadata.comment)))
+	assert.strictEqual(commentTag(tags.comment), coalesceUndefined(overrides.comment, commentTag(originalMetadata.comment)))
 	assert.strictEqual(arrayTag(tags.genre), coalesceUndefined(overrides.genre, arrayTag(originalMetadata.genre)))
 	assert.strictEqual(tags.title, coalesceUndefined(overrides.title, originalMetadata.title))
 	assert.strictEqual(tags.track.no, coalesceUndefined(overrides.trackNumber, originalMetadata.track.no))

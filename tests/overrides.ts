@@ -1,9 +1,6 @@
-import path, { dirname } from "path"
-import { fileURLToPath } from "url"
+import path from "path"
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
+const testsDir = path.join(process.cwd(), "tests")
 
 export const baseOverrides = {
 	album: "\\a\\l\"b\"u'm'",
@@ -42,6 +39,6 @@ export const singleOverride = {
 }
 
 export const pictureOverride = {
-	coverPicturePath: path.join(__dirname, "test.jpg"),
+	coverPicturePath: path.join(testsDir, "test.jpg"),
 	composer: "composer",
 }

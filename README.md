@@ -1,7 +1,7 @@
 # Write AAC Metadata
 NodeJS module that will allow you to write aac (m4a, m4b) metadata using ffmpeg
 
-## Installation 
+## Installation
 ```sh
 npm install write-aac-metadata --save
 yarn add write-aac-metadata

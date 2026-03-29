@@ -10,16 +10,7 @@ import { utimes } from "utimes"
 
 function addMetaData(args: string[], key: string, value: string | number | undefined) {
 	if (value !== undefined) {
-		let arg = value
-
-		if (process.platform !== "win32") {
-			arg = `'${arg.toString().replace(/'/g, "'\\''")}'`
-		}
-		else {
-			arg = `"${arg.toString().replace(/"/g, "\\\"")}"`
-		}
-
-		args.push("-metadata", `${key}=${arg}`)
+		args.push("-metadata", `${key}=${value.toString()}`)
 	}
 }
 
@@ -28,7 +19,8 @@ function onExit(childProcess: ChildProcess): Promise<void> {
 		childProcess.once("exit", code => {
 			if (code === 0) {
 				resolve(undefined)
-			} else {
+			}
+			else {
 				reject(new Error(`Exit with error code: ${code?.toString()}`))
 			}
 		})
@@ -49,9 +41,12 @@ function onExit(childProcess: ChildProcess): Promise<void> {
 export default async (inputFilePath: string, metadata: Metadata, outputFilePath?: string, options?: Options) => {
 	const opt = { ...DefaultOptions, ...options }
 	const args = ["-i"]
-	const coverPicturePath = metadata.coverPicturePath ? metadata.coverPicturePath : ""
-	//Appears to be some issue with the type definition of ffmepgStatic so I have to do the below until that's fixed
-	const ffmpegPath = (ffmpegStatic as unknown) as string
+	const coverPicturePath = metadata.coverPicturePath ?? ""
+	const ffmpegPath = typeof ffmpegStatic === "string" ? ffmpegStatic : ffmpegStatic.default
+
+	if (!ffmpegPath) {
+		throw new Error("Unable to resolve the ffmpeg executable path")
+	}
 	let ffmpegFileOutputPath = outputFilePath ?? ""
 
 	if (!fs.existsSync(inputFilePath)) {
@@ -91,10 +86,10 @@ export default async (inputFilePath: string, metadata: Metadata, outputFilePath?
 		console.debug("Applied Options:", opt)
 	}
 
-	args.push(`"${inputFilePath}"`)
+	args.push(inputFilePath)
 
 	if (coverPicturePath) {
-		args.push("-i", `"${coverPicturePath}"`)
+		args.push("-i", coverPicturePath)
 	}
 
 	if (coverPicturePath) {
@@ -122,14 +117,14 @@ export default async (inputFilePath: string, metadata: Metadata, outputFilePath?
 	addMetaData(args, "synopsis", metadata.synopsis)
 	addMetaData(args, "title", metadata.title)
 
-	args.push(`"${ffmpegFileOutputPath}"`)
+	args.push(ffmpegFileOutputPath)
 
 	if (opt.debug) {
 		// eslint-disable-next-line no-console
 		console.debug(`Running command ${ffmpegPath} ${args.join(" ")}`)
 	}
 
-	const ffmpeg = spawn(ffmpegPath, args, { windowsVerbatimArguments: true, stdio: opt.pipeStdio ? ["pipe", process.stdout, process.stderr] : undefined, detached: false, shell: process.platform !== "win32" })
+	const ffmpeg = spawn(ffmpegPath, args, { stdio: opt.pipeStdio ? ["pipe", process.stdout, process.stderr] : undefined, detached: false })
 
 	await onExit(ffmpeg)
 
