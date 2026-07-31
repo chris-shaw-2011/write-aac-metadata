@@ -1,136 +1,146 @@
-import { type ChildProcess, spawn } from "child_process"
-import ffmpegStatic from "ffmpeg-static"
+import {
+	ByteVector,
+	File as TagLibFile,
+	Mpeg4AppleTag,
+	Mpeg4BoxHeader,
+	Mpeg4IsoChunkLargeOffset,
+	Mpeg4IsoChunkOffsetBox,
+	Picture,
+	ReadStyle,
+	StringType,
+	TagTypes,
+} from "node-taglib-sharp"
 import type Options from "./Options.js"
 import DefaultOptions from "./DefaultOptions.js"
 import type Metadata from "./Metadata.js"
-import { v4 as uuid } from "uuid"
 import path from "path"
 import fs from "fs"
 import { utimes } from "utimes"
 
-function addMetaData(args: string[], key: string, value: string | number | undefined) {
-	if (value !== undefined) {
-		args.push("-metadata", `${key}=${value.toString()}`)
+const longDescriptionBoxType = ByteVector.fromString("ldes", StringType.Latin1).makeReadOnly()
+
+/*
+ * node-taglib-sharp 6.0.3 validates MPEG-4 box size changes as unsigned values,
+ * even though replacing metadata can legitimately shrink a box. Retain its
+ * behavior while accepting signed changes in the affected internals.
+ */
+Mpeg4BoxHeader.prototype.overwrite = function (file: TagLibFile, sizeChange: number) {
+	if (!Number.isSafeInteger(sizeChange)) {
+		throw new Error("Argument out of range: sizeChange must be a safe JS integer")
+	}
+
+	if (Reflect.get(this, "_fromDisk") !== true) {
+		throw new Error("Cannot overwrite headers not on disk.")
+	}
+
+	const position: unknown = Reflect.get(this, "_position")
+	const oldHeaderSize = this.headerSize
+
+	if (typeof position !== "number" || !Number.isSafeInteger(position)) {
+		throw new Error("Invalid MPEG-4 box header position")
+	}
+
+	this.dataSize += sizeChange
+	file.insert(this.render(), position, oldHeaderSize)
+
+	return sizeChange + this.headerSize - oldHeaderSize
+}
+
+function updateMpeg4ChunkOffsets(box: Mpeg4IsoChunkOffsetBox | Mpeg4IsoChunkLargeOffset, sizeDifference: number, after: number) {
+	if (!Number.isSafeInteger(sizeDifference)) {
+		throw new Error("Argument out of range: sizeDifference must be a safe JS integer")
+	}
+	if (!Number.isSafeInteger(after) || after < 0) {
+		throw new Error("Argument out of range: after must be a safe, positive JS integer")
+	}
+
+	const offsetTable: unknown = Reflect.get(box, "_offsetTable")
+
+	if (!Array.isArray(offsetTable) || !offsetTable.every(offset => typeof offset === "number")) {
+		throw new Error("Invalid MPEG-4 chunk offset table")
+	}
+
+	for (let i = 0; i < offsetTable.length; i++) {
+		if (offsetTable[i] >= after) {
+			offsetTable[i] += sizeDifference
+		}
 	}
 }
 
-function onExit(childProcess: ChildProcess): Promise<void> {
-	return new Promise((resolve, reject) => {
-		childProcess.once("exit", code => {
-			if (code === 0) {
-				resolve(undefined)
-			}
-			else {
-				reject(new Error(`Exit with error code: ${code?.toString()}`))
-			}
-		})
-		/* istanbul ignore next */
-		childProcess.once("error", (err: Error) => { // This should only happen if ffmpeg crashes so we can't really test it
-			reject(err)
-		})
-	})
+Mpeg4IsoChunkOffsetBox.prototype.updatePositions = function (sizeDifference: number, after: number) {
+	updateMpeg4ChunkOffsets(this, sizeDifference, after)
+}
+
+Mpeg4IsoChunkLargeOffset.prototype.updatePosition = function (sizeDifference: number, after: number) {
+	updateMpeg4ChunkOffsets(this, sizeDifference, after)
+}
+
+function applyMetadata(tag: Mpeg4AppleTag, metadata: Metadata) {
+	if (metadata.album !== undefined) {
+		tag.album = metadata.album
+	}
+	if (metadata.artist !== undefined) {
+		tag.performers = [metadata.artist]
+	}
+	if (metadata.albumArtist !== undefined) {
+		tag.albumArtists = [metadata.albumArtist]
+	}
+	if (metadata.grouping !== undefined) {
+		tag.grouping = metadata.grouping
+	}
+	if (metadata.composer !== undefined) {
+		tag.composers = [metadata.composer]
+	}
+	if (metadata.year !== undefined) {
+		tag.year = metadata.year
+	}
+	if (metadata.trackNumber !== undefined) {
+		tag.track = metadata.trackNumber
+	}
+	if (metadata.comment !== undefined) {
+		tag.comment = metadata.comment
+	}
+	if (metadata.genre !== undefined) {
+		tag.genres = [metadata.genre]
+	}
+	if (metadata.copyright !== undefined) {
+		tag.copyright = metadata.copyright
+	}
+	if (metadata.description !== undefined) {
+		tag.description = metadata.description
+	}
+	if (metadata.synopsis !== undefined) {
+		tag.setQuickTimeString(longDescriptionBoxType, metadata.synopsis)
+	}
+	if (metadata.title !== undefined) {
+		tag.title = metadata.title
+	}
+	if (metadata.coverPicturePath) {
+		tag.pictures = [Picture.fromPath(metadata.coverPicturePath)]
+	}
 }
 
 /**
  *
  * @param inputFilePath The fully qualified path to the file that will have its metadata changed
  * @param metadata The metadata to update, anything that's set to undefined will not be changed and the current value kept
- * @param outputFilePath The output name of the file, pass undefined or empy string if you want to keep the file name the same
+ * @param outputFilePath The output name of the file, pass undefined or an empty string if you want to keep the file name the same
  * @param options
  */
 export default async (inputFilePath: string, metadata: Metadata, outputFilePath?: string, options?: Options) => {
 	const opt = { ...DefaultOptions, ...options }
-	const args = ["-i"]
-	const coverPicturePath = metadata.coverPicturePath ?? ""
-	const ffmpegPath = typeof ffmpegStatic === "string" ? ffmpegStatic : ffmpegStatic.default
-
-	if (!ffmpegPath) {
-		throw new Error("Unable to resolve the ffmpeg executable path")
-	}
-	let ffmpegFileOutputPath = outputFilePath ?? ""
 
 	if (!fs.existsSync(inputFilePath)) {
 		throw new Error(`${inputFilePath}: file does not exist`)
 	}
 
-	if (!outputFilePath) {
-		outputFilePath = inputFilePath
-		ffmpegFileOutputPath = inputFilePath
-	}
+	const destinationPath = outputFilePath === undefined || outputFilePath === "" ? inputFilePath : outputFilePath
+	const inputPath = path.resolve(inputFilePath).toLowerCase()
+	const outputPath = path.resolve(destinationPath).toLowerCase()
+	const modifiesInput = inputPath === outputPath
 
-	if (fs.existsSync(outputFilePath)) {
-		if (path.normalize(inputFilePath).toLowerCase() === path.normalize(outputFilePath).toLowerCase()) {
-			const parsed = path.parse(outputFilePath)
-
-			ffmpegFileOutputPath = path.join(parsed.dir, `${parsed.name}-${uuid()}${parsed.ext}`)
-		}
-		else {
-			throw new Error(`${outputFilePath}: file already exists`)
-		}
-	}
-
-	if (opt.debug) {
-		// eslint-disable-next-line no-console
-		console.debug("filePath:", inputFilePath)
-		// eslint-disable-next-line no-console
-		console.debug("outputFilePath:", outputFilePath)
-
-		if (ffmpegFileOutputPath !== outputFilePath) {
-			// eslint-disable-next-line no-console
-			console.debug("ffmpegFileOutputPath", ffmpegFileOutputPath)
-		}
-
-		// eslint-disable-next-line no-console
-		console.debug("metadata:", metadata)
-		// eslint-disable-next-line no-console
-		console.debug("Applied Options:", opt)
-	}
-
-	args.push(inputFilePath)
-
-	if (coverPicturePath) {
-		args.push("-i", coverPicturePath)
-	}
-
-	if (coverPicturePath) {
-		args.push("-map", "0:0")
-		args.push("-map", "1")
-	}
-
-	args.push("-c", "copy")
-
-	if (coverPicturePath) {
-		args.push("-disposition:v:0", "attached_pic")
-	}
-
-	addMetaData(args, "album", metadata.album)
-	addMetaData(args, "artist", metadata.artist)
-	addMetaData(args, "album_artist", metadata.albumArtist)
-	addMetaData(args, "grouping", metadata.grouping)
-	addMetaData(args, "composer", metadata.composer)
-	addMetaData(args, "date", metadata.year)
-	addMetaData(args, "track", metadata.trackNumber)
-	addMetaData(args, "comment", metadata.comment)
-	addMetaData(args, "genre", metadata.genre)
-	addMetaData(args, "copyright", metadata.copyright)
-	addMetaData(args, "description", metadata.description)
-	addMetaData(args, "synopsis", metadata.synopsis)
-	addMetaData(args, "title", metadata.title)
-
-	args.push(ffmpegFileOutputPath)
-
-	if (opt.debug) {
-		// eslint-disable-next-line no-console
-		console.debug(`Running command ${ffmpegPath} ${args.join(" ")}`)
-	}
-
-	const ffmpeg = spawn(ffmpegPath, args, { stdio: opt.pipeStdio ? ["pipe", process.stdout, process.stderr] : undefined, detached: false })
-
-	await onExit(ffmpeg)
-
-	if (opt.debug) {
-		// eslint-disable-next-line no-console
-		console.debug(`Created file ${ffmpegFileOutputPath}`)
+	if (fs.existsSync(destinationPath) && !modifiesInput) {
+		throw new Error(`${destinationPath}: file already exists`)
 	}
 
 	const inputFileStats = fs.statSync(inputFilePath)
@@ -140,24 +150,42 @@ export default async (inputFilePath: string, metadata: Metadata, outputFilePath?
 
 	if (opt.debug) {
 		// eslint-disable-next-line no-console
-		console.debug(`Setting ${ffmpegFileOutputPath} creation date: ${new Date(btime).toDateString()} (${btime}), accessed date: ${new Date(atime).toDateString()} (${atime}), modified date: ${new Date(atime).toDateString()} (${atime}) so it matches with the original file`)
+		console.debug("filePath:", inputFilePath)
+		// eslint-disable-next-line no-console
+		console.debug("outputFilePath:", destinationPath)
+		// eslint-disable-next-line no-console
+		console.debug("metadata:", metadata)
+		// eslint-disable-next-line no-console
+		console.debug("Applied Options:", opt)
 	}
 
-	await utimes(ffmpegFileOutputPath, { btime, atime, mtime })
-
-	if (ffmpegFileOutputPath !== outputFilePath) {
-		if (opt.debug) {
-			// eslint-disable-next-line no-console
-			console.debug(`Deleting ${outputFilePath}`)
-		}
-
-		fs.unlinkSync(outputFilePath)
-
-		if (opt.debug) {
-			// eslint-disable-next-line no-console
-			console.debug(`Renaming ${ffmpegFileOutputPath} to ${outputFilePath}`)
-		}
-
-		fs.renameSync(ffmpegFileOutputPath, outputFilePath)
+	if (!modifiesInput) {
+		fs.copyFileSync(inputFilePath, destinationPath)
 	}
+
+	let file: TagLibFile | undefined
+
+	try {
+		file = TagLibFile.createFromPath(destinationPath, undefined, ReadStyle.None)
+		const tag = file.getTag(TagTypes.Apple, true)
+
+		if (!(tag instanceof Mpeg4AppleTag)) {
+			throw new Error(`${destinationPath}: file does not contain a writable Apple MPEG-4 tag`)
+		}
+
+		applyMetadata(tag, metadata)
+		file.save()
+	}
+	finally {
+		file?.dispose()
+	}
+
+	if (opt.debug) {
+		// eslint-disable-next-line no-console
+		console.debug(`Updated metadata in ${destinationPath}`)
+		// eslint-disable-next-line no-console
+		console.debug(`Setting ${destinationPath} creation date: ${new Date(btime).toDateString()} (${btime}), accessed date: ${new Date(atime).toDateString()} (${atime}), modified date: ${new Date(mtime).toDateString()} (${mtime}) so it matches with the original file`)
+	}
+
+	await utimes(destinationPath, { btime, atime, mtime })
 }

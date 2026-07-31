@@ -1,5 +1,10 @@
 # Write AAC Metadata
-NodeJS module that will allow you to write aac (m4a, m4b) metadata using ffmpeg
+
+> **Warning: This package is no longer maintained.**
+>
+> `write-aac-metadata` is a wrapper around [`node-taglib-sharp`](https://www.npmjs.com/package/node-taglib-sharp), which provides the metadata-writing functionality directly. New and existing projects should use `node-taglib-sharp` instead. This package will remain available to avoid breaking existing installations, but no further updates are planned.
+
+## Legacy documentation
 
 ## Installation
 ```sh
@@ -18,8 +23,7 @@ const writeMetadata = async () => {
 writeMetadata()
 ```
 
-If you want to modify a file in place don't pass anything to the 3rd parameter. Ffmpeg doesn't allow this directly so to simulate it a new file is created with the input file's name and a guid on the end. After the metadata
-has been added and the new file is finished the original file is deleted and the new file is renamed to be the same name as the original file. This package also copies the creation date of the original file to the new file
+If you want to modify a file in place, don't pass anything to the third parameter. If you provide a different output path, the input file is copied there before its metadata is updated. This package preserves the original file timestamps.
 
 ## Metadata
 Set whatever metadata you want updated. Any fields that are left as undefined will not be changed and the current value of the metadata will be copied to the output file
@@ -57,7 +61,8 @@ These are the options you can pass as the 4th parameter
     */
    debug?: boolean,
    /**
-    * If stdio should be piped to the current console, useful for figuring out issues with ffmpeg
+    * Retained for backwards compatibility, but no longer has any effect.
+    * @deprecated
     * @default false
     */
    pipeStdio?: boolean,

@@ -5,7 +5,9 @@ export default interface Options {
 	 */
 	debug?: boolean,
 	/**
-	 * If stdio should be piped to the current console, useful for figuring out issues with ffmpeg
+	 * Retained for backwards compatibility. Metadata is now written in-process,
+	 * so there is no child-process stdio to pipe.
+	 * @deprecated This option no longer has any effect.
 	 * @default false
 	 */
 	pipeStdio?: boolean,
